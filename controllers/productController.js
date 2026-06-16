@@ -3,7 +3,35 @@ const Product = require('../models/Product')
 // Get all products
 const getProducts = async (req, res) => {
   try {
-    const products = await Product.find()
+    const { search, category, minPrice, maxPrice, sort } = req.query
+
+    let query = {}
+
+    // Search by name
+    if (search) {
+      query.name = { $regex: search, $options: 'i' }
+    }
+
+    // Filter by category
+    if (category && category !== 'all') {
+      query.category = category
+    }
+
+    // Filter by price range
+    if (minPrice || maxPrice) {
+      query.price = {}
+      if (minPrice) query.price.$gte = Number(minPrice)
+      if (maxPrice) query.price.$lte = Number(maxPrice)
+    }
+
+    // Sort
+    let sortOption = {}
+    if (sort === 'price-low') sortOption = { price: 1 }
+    else if (sort === 'price-high') sortOption = { price: -1 }
+    else if (sort === 'newest') sortOption = { createdAt: -1 }
+    else sortOption = { createdAt: -1 }
+
+    const products = await Product.find(query).sort(sortOption)
     res.json(products)
   } catch (error) {
     res.status(500).json({ message: error.message })
