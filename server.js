@@ -7,19 +7,19 @@ dotenv.config()
 
 const app = express()
 
-// Middleware
 app.use(cors())
 app.use(express.json())
 
-// Routes
 const productRoutes = require('./routes/productRoutes')
+const authRoutes = require('./routes/authRoutes')
+
 app.use('/api/products', productRoutes)
+app.use('/api/auth', authRoutes)
 
 app.get('/', (req, res) => {
   res.send('E-Commerce API is running!')
 })
 
-// Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB Connected!')
