@@ -12,9 +12,11 @@ app.use(express.json())
 
 const productRoutes = require('./routes/productRoutes')
 const authRoutes = require('./routes/authRoutes')
+const orderRoutes = require('./routes/orderRoutes')
 
 app.use('/api/products', productRoutes)
 app.use('/api/auth', authRoutes)
+app.use('/api/orders', orderRoutes)
 
 app.get('/', (req, res) => {
   res.send('E-Commerce API is running!')
