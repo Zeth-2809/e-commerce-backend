@@ -1,6 +1,9 @@
 const Order = require('../models/Order')
+const Product = require('../models/Product')
 
 // Create new order
+
+
 const createOrder = async (req, res) => {
   try {
     const { orderItems, shippingAddress, totalPrice } = req.body
@@ -9,6 +12,18 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ message: 'No order items' })
     }
 
+    // Check stock availability first
+    for (const item of orderItems) {
+      const product = await Product.findById(item.product)
+      if (!product) {
+        return res.status(404).json({ message: `Product not found: ${item.name}` })
+      }
+      if (product.stock < item.quantity) {
+        return res.status(400).json({ message: `Not enough stock for ${item.name}. Only ${product.stock} left.` })
+      }
+    }
+
+    // Create the order
     const order = new Order({
       user: req.user._id,
       orderItems,
@@ -17,6 +32,14 @@ const createOrder = async (req, res) => {
     })
 
     const createdOrder = await order.save()
+
+    // Decrease stock for each product
+    for (const item of orderItems) {
+      await Product.findByIdAndUpdate(item.product, {
+        $inc: { stock: -item.quantity }
+      })
+    }
+
     res.status(201).json(createdOrder)
   } catch (error) {
     res.status(500).json({ message: error.message })
@@ -63,7 +86,19 @@ const updateOrderStatus = async (req, res) => {
     if (!order) {
       return res.status(404).json({ message: 'Order not found' })
     }
-    order.status = req.body.status
+
+    const newStatus = req.body.status
+
+    // If cancelling an order that wasn't already cancelled, restore stock
+    if (newStatus === 'Cancelled' && order.status !== 'Cancelled') {
+      for (const item of order.orderItems) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stock: item.quantity }
+        })
+      }
+    }
+
+    order.status = newStatus
     const updatedOrder = await order.save()
     res.json(updatedOrder)
   } catch (error) {
